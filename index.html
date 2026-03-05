@@ -7,7 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
     <style>
-:root {
+        :root {
             --primary: #7C903F; 
             --primary-hover: #637530;
             --bg-color: #EFECE5; 
@@ -44,7 +44,6 @@
             z-index: 10;
         }
 
-        
         .screen { display: none; }
         .screen.active { display: block; animation: fadeIn 0.3s; }
         
@@ -151,7 +150,8 @@
 
         #voting-screen {
             overflow: hidden; 
-            max-height: 95vh;         }
+            max-height: 95vh;         
+        }
 
         .countdown-text { font-size: 150px; font-weight: bold; color: white; }
 
@@ -192,8 +192,17 @@
             .result-grid { grid-template-columns: 1fr; }
             .result-screen { overflow-y: auto; max-height: none; }
         }
-        .result-item.winner-highlight { background-color: rgba(124, 144, 63, 0.1); color: var(--primary); font-weight: bold; border-left: 6px solid var(--primary); border-bottom: none; margin-bottom: 5px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
-        .winner-text { font-size: 36px; color: var(--text-main); font-weight: bold; text-align: center; margin: 40px 0; background: var(--warm-gray-light); padding: 20px; border-radius: 8px; }
+        .result-item.winner-highlight { 
+    background-color: rgba(124, 144, 63, 0.1); color: var(--primary); font-weight: bold; border-left: 6px solid var(--primary); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); 
+    border-bottom: 2px solid transparent; 
+}
+.winner-text { 
+    font-size: 36px; color: var(--text-main); font-weight: bold; text-align: center; margin: 40px 0; background: var(--warm-gray-light); padding: 20px; border-radius: 8px; opacity: 0; transition: opacity 0.5s;
+    min-height: 135px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
 
         .history-item { border: 2px solid var(--warm-gray-light); padding: 20px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;}
         .history-info { cursor: pointer; flex-grow: 1; font-size: 22px; }
@@ -201,7 +210,7 @@
         .fullscreen-toggle { position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.5); color: white; border: none; padding: 10px 15px; cursor: pointer; z-index: 1000; font-size: 16px; transition: background 0.3s; }
         .fullscreen-toggle:hover { background: rgba(0,0,0,0.8); }
 
-.copyright { 
+        .copyright { 
             position: fixed; 
             bottom: 15px; 
             width: 100%; 
@@ -220,7 +229,7 @@
             background-image: 
                 repeating-linear-gradient(75deg, transparent, transparent 2px, rgba(255,255,255,0.25) 3px, rgba(255,255,255,0.25) 5px),
                 repeating-linear-gradient(-85deg, transparent, transparent 3px, rgba(0,0,0,0.15) 4px, rgba(0,0,0,0.15) 6px);
-            width: 0%; transition: width 1s ease-in-out; 
+            width: 0%; transition: width 0.1s linear; 
         }
 
         .winner-highlight .result-bar-fill { 
@@ -645,9 +654,11 @@ function buildVotingScreen() {
 
             if(voteState.currentPersonVotesCast >= voteState.votesPerPerson) {
                 if(voteState.currentPersonIndex >= voteState.participants) {
-                    updateProgress();
-                    setTimeout(() => showScreen('end-screen'), 500);
-                } else {
+                    voteState.currentPersonIndex++; 
+                    updateProgress(); 
+                    isVotingLocked = true; 
+                    setTimeout(() => showScreen('end-screen'), 1000);  
+               } else {
                     voteState.currentPersonIndex++;
                     voteState.currentPersonVotesCast = 0;
                     updateProgress();
@@ -706,6 +717,7 @@ function buildVotingScreen() {
         }
 
         const drumAudio = new Audio('DR.mp3');
+        drumAudio.preload = 'auto'; 
 
         function playDrumRoll() {
             try {
@@ -742,7 +754,9 @@ function buildVotingScreen() {
 
         function showFinalResults() {
             if (drumPlayer && typeof drumPlayer.pauseVideo === 'function') { drumPlayer.pauseVideo(); }
-            
+
+            saveToLocalStorage();
+
             showScreen('result-screen');
             document.getElementById('result-title').innerText = voteState.title;
             document.getElementById('result-summary').innerHTML = `
@@ -769,47 +783,77 @@ function buildVotingScreen() {
             }
 
             voteState.items.forEach(item => {
-                const isWinner = (item.votes === maxVotes && maxVotes > 0);
-                const highlightClass = isWinner ? 'winner-highlight' : '';
-                const percent = voteState.totalVotesCast === 0 ? 0 : Math.round((item.votes / voteState.totalVotesCast) * 100);
-                
                 detailContainer.insertAdjacentHTML('beforeend', `
-                    <div class="result-item ${highlightClass}" style="padding: ${itemPadding};">
+                    <div class="result-item" id="result-item-${item.id}" style="padding: ${itemPadding};">
                         <div class="result-item-info" style="font-size: ${fontSize};">
                             <span>${item.id}. ${item.name}</span>
-                            <span>${item.votes}표 (${percent}%)</span>
+                            <span id="result-text-${item.id}">0표 (0%)</span>
                         </div>
                         <div class="result-bar-container" style="height: ${barHeight}; margin-top: 5px;">
-                            <div class="result-bar-fill" style="width: ${percent}%;"></div>
+                            <div class="result-bar-fill" id="result-bar-${item.id}" style="width: 0%;"></div>
                         </div>
                     </div>
                 `);
             });
 
-if(maxVotes === 0) {
-                document.getElementById('winner-announcement').innerText = "모두 0표입니다.";
-            } else {
-                const winnerNames = winners.map(w => w.name).join("', '");
-                
-                if (winners.length > 1) {
-                    document.getElementById('winner-announcement').innerHTML = `
-                        '${winnerNames}'
-                        <span style="font-size: 20px; font-weight: normal; display: block; margin-top: 10px; color: var(--warm-gray-hover);">
-                            동점입니다! 😲
-                        </span>`;
-                } else {
-                    document.getElementById('winner-announcement').innerHTML = `
-                        '${winnerNames}'
-                        <span style="font-size: 22px; font-weight: normal; display: block; margin-top: 10px;">
-                            당선을 축하합니다🎉
-                        </span>`;
+            const winnerAnnouncement = document.getElementById('winner-announcement');
+            winnerAnnouncement.innerHTML = '';
+            winnerAnnouncement.style.opacity = '0'; 
+            let currentTick = 0;
+            let targetTicks = maxVotes;
 
-                    confetti({ particleCount: 150, spread: 80, origin: { x: 0, y: 0.6 }, angle: 60, zIndex: 9999 });
-                    confetti({ particleCount: 150, spread: 80, origin: { x: 1, y: 0.6 }, angle: 120, zIndex: 9999 });
+            const animInterval = setInterval(() => {
+                if (targetTicks > 0) {
+                    currentTick++;
                 }
-            }
 
-            saveToLocalStorage();
+                voteState.items.forEach(item => {
+
+                    const displayVotes = Math.min(currentTick, item.votes);
+                    const percent = voteState.totalVotesCast === 0 ? 0 : Math.round((displayVotes / voteState.totalVotesCast) * 100);
+                    
+                    document.getElementById(`result-text-${item.id}`).innerText = `${displayVotes}표 (${percent}%)`;
+                    document.getElementById(`result-bar-${item.id}`).style.width = `${percent}%`;
+                });
+
+                if (currentTick >= targetTicks) {
+                    clearInterval(animInterval);
+
+                    setTimeout(() => {
+
+                        voteState.items.forEach(item => {
+                            if (item.votes === maxVotes && maxVotes > 0) {
+                                document.getElementById(`result-item-${item.id}`).classList.add('winner-highlight');
+                            }
+                        });
+
+                        if(maxVotes === 0) {
+                            winnerAnnouncement.innerText = "모두 0표입니다.";
+                        } else {
+                            const winnerNames = winners.map(w => w.name).join("', '");
+                            
+                            if (winners.length > 1) {
+                                winnerAnnouncement.innerHTML = `
+                                    '${winnerNames}'
+                                    <span style="font-size: 20px; font-weight: normal; display: block; margin-top: 10px; color: var(--warm-gray-hover);">
+                                        동점입니다! 😲
+                                    </span>`;
+                            } else {
+                                winnerAnnouncement.innerHTML = `
+                                    '${winnerNames}'
+                                    <span style="font-size: 22px; font-weight: normal; display: block; margin-top: 10px;">
+                                        당선을 축하합니다🎉
+                                    </span>`;
+
+                                confetti({ particleCount: 150, spread: 80, origin: { x: 0, y: 0.6 }, angle: 60, zIndex: 9999 });
+                                confetti({ particleCount: 150, spread: 80, origin: { x: 1, y: 0.6 }, angle: 120, zIndex: 9999 });
+                            }
+                        }
+
+                        winnerAnnouncement.style.opacity = '1';
+                    }, 600);
+                }
+            }, 1000);
         }
 
         function resetToEntry() {
