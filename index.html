@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>우리 반 투표 프로그램</title>
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4A90E2;
+            --primary-hover: #357ABD;
+            --bg-color: #F4F7F6;
+            --box-bg: #FFFFFF;
+            --text-main: #333333;
+            --border-radius: 12px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Gowun Dodum', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); display: flex; justify-content: center; align-items: center; min-height: 100vh; font-size: 18px; position: relative; }
+        
+        .container { background-color: var(--box-bg); width: 100%; max-width: 900px; padding: 40px; border-radius: var(--border-radius); box-shadow: 0 4px 20px rgba(0,0,0,0.1); z-index: 2; }
+        .screen { display: none; }
+        .screen.active { display: block; animation: fadeIn 0.3s; }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        h1 { font-size: 40px; text-align: center; margin-bottom: 30px; color: var(--primary); }
+        h2 { font-size: 32px; text-align: center; margin-bottom: 25px; color: var(--primary); }
+        h3 { font-size: 24px; text-align: center; margin-bottom: 20px; color: var(--primary); }
+
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 20px; color: #2c3e50; }
+        .input-group input[type="text"], .input-group input[type="number"] { width: 100%; padding: 15px; border: 2px solid #ccc; border-radius: 8px; font-size: 20px; outline: none; transition: border 0.3s; }
+        .input-group input:focus { border-color: var(--primary); }
+
+        .btn { display: block; width: 100%; padding: 15px 20px; background-color: var(--primary); color: white; border: none; border-radius: 8px; font-size: 20px; font-weight: bold; cursor: pointer; transition: background 0.2s, color 0.2s; text-align: center; }
+        .btn:hover { background-color: var(--primary-hover); }
+        .btn-secondary { background-color: #95A5A6; color: white; }
+        .btn-secondary:hover { background-color: #7F8C8D; }
+        .btn-outline { background-color: white; color: var(--primary); border: 2px solid var(--primary); }
+        .btn-outline:hover { background-color: var(--primary); color: white; }
+        .btn-danger { background-color: #E74C3C; }
+        .btn-danger:hover { background-color: #C0392B; }
+
+        .entry-buttons { display: flex; gap: 20px; justify-content: center; margin-top: 40px; }
+        .entry-buttons .btn { width: 250px; margin: 0; }
+
+        .setup-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 0; }
+        .setup-left { padding-right: 40px; border-right: 2px solid #eee; }
+        .setup-right { padding-left: 40px; }
+
+        @media (max-width: 768px) {
+            .setup-grid { grid-template-columns: 1fr; }
+            .setup-left { border-right: none; padding-right: 0; border-bottom: 2px solid #eee; padding-bottom: 30px; margin-bottom: 30px; }
+            .setup-right { padding-left: 0; }
+        }
+
+        .setup-actions { display: flex; justify-content: space-between; margin-top: 40px; padding-top: 20px; border-top: 2px dashed #eee; }
+        .setup-actions .btn { width: 200px; margin: 0; }
+
+        .items-container { max-height: 250px; overflow-y: auto; margin-bottom: 15px; padding-right: 10px; }
+        .items-container::-webkit-scrollbar { width: 8px; }
+        .items-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .items-container::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+
+        .item-input-box { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+        .item-input-box span { font-weight: bold; font-size: 22px; width: 30px; text-align: right; }
+        .btn-remove { background: #ff7675; color: white; border: none; width: 40px; height: 40px; border-radius: 8px; font-size: 20px; cursor: pointer; font-weight: bold; flex-shrink: 0; }
+        .btn-remove:hover { background: #d63031; }
+
+        #toast { visibility: hidden; min-width: 300px; background-color: rgba(0,0,0,0.8); color: #fff; text-align: center; border-radius: 8px; padding: 20px; position: fixed; z-index: 1000; left: 50%; bottom: 30px; transform: translateX(-50%); font-size: 20px; }
+        #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+        @keyframes fadein { from { bottom: 0; opacity: 0; } to { bottom: 30px; opacity: 1; } }
+        @keyframes fadeout { from { bottom: 30px; opacity: 1; } to { bottom: 0; opacity: 0; } }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); justify-content: center; align-items: center; z-index: 999; flex-direction: column; color: white; padding: 20px; text-align: center;}
+        .modal-content { background: white; color: var(--text-main); padding: 40px; border-radius: var(--border-radius); max-width: 500px; width: 100%; text-align: left; }
+        .modal-actions { display: flex; justify-content: space-between; gap: 20px; margin-top: 30px; }
+        .modal-actions .btn { width: 100%; margin: 0; }
+
+        .progress-bar { width: 100%; height: 30px; background-color: #e0e0e0; border-radius: 15px; overflow: hidden; margin-bottom: 20px; }
+        .progress-fill { height: 100%; background-color: var(--primary); width: 0%; transition: width 0.3s; }
+        .progress-text { font-size: 36px; font-weight: bold; color: #2c3e50; text-align: center; margin-bottom: 30px; }
+
+        .vote-btn { background-color: #fff; color: var(--text-main); border: 3px solid var(--primary); margin-bottom: 15px; font-size: 28px; text-align: left; padding: 20px 30px; width: 100%; border-radius: 12px; }
+        .vote-btn:hover { background-color: #f0f8ff; transform: translateY(-2px); transition: all 0.2s; }
+        .vote-btn-abstain { border-color: #95A5A6; color: #7f8c8d; margin-top: 30px; background-color: #f9f9f9; text-align: center; }
+
+        .countdown-text { font-size: 150px; font-weight: bold; color: white; }
+
+        .result-item { display: flex; justify-content: space-between; padding: 15px 20px; border-bottom: 2px solid #eee; font-size: 24px; transition: background 0.3s; }
+        .result-item.winner-highlight { background-color: #fff8e1; color: #d35400; font-weight: bold; border-left: 6px solid #f1c40f; border-bottom: none; border-radius: 8px; margin-bottom: 5px; box-shadow: 0 2px 8px rgba(241, 196, 15, 0.2); }
+        .winner-text { font-size: 36px; color: #E74C3C; font-weight: bold; text-align: center; margin: 40px 0; background: #fff3f3; padding: 20px; border-radius: 12px; }
+
+        .history-item { border: 2px solid #ddd; padding: 20px; border-radius: 12px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;}
+        .history-info { cursor: pointer; flex-grow: 1; font-size: 22px; }
+
+        .fullscreen-toggle { position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.5); color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; z-index: 1000; font-size: 16px; transition: background 0.3s; }
+        .fullscreen-toggle:hover { background: rgba(0,0,0,0.8); }
+
+        .copyright { position: fixed; bottom: 15px; width: 100%; text-align: center; color: #bdc3c7; font-size: 12px; pointer-events: none; z-index: 1; }
+    </style>
+</head>
+<body>
+
+<div class="copyright">
+    Copyright © 2026 
+    <a href="https://archive.3arch2nd.site/" target="_blank" style="text-decoration: underline; color: inherit; pointer-events: auto; cursor: pointer;">휴르쌤</a>. 
+    All rights reserved.
+</div>
+
+    <button class="fullscreen-toggle" onclick="toggleFullScreen()">전체화면 켜기/끄기 🖥️</button>
+
+    <div id="entry-screen" class="container screen active">
+        <h1>📊 학급 투표 프로그램</h1>
+        
+        <div class="entry-buttons">
+            <button class="btn" onclick="showScreen('setup-screen')">✨ 새 투표 시작</button>
+            <button class="btn btn-outline" onclick="loadHistory()">📂 이전 기록 보기</button>
+        </div>
+    </div>
+
+    <div id="setup-screen" class="container screen">
+        <h2>새 투표 설정</h2>
+        
+        <div class="setup-grid">
+            <div class="setup-left">
+                <div class="input-group">
+                    <label>투표 제목</label>
+                    <input type="text" id="vote-title" placeholder="예: 1학기 회장 선거">
+                </div>
+                
+                <div class="input-group">
+                    <label>투표 항목 (후보자 등)</label>
+                    <div id="items-list" class="items-container"></div>
+                    <button class="btn btn-secondary" style="padding: 10px; font-size: 18px;" onclick="addItemInput()">+ 항목 추가하기</button>
+                </div>
+            </div>
+
+            <div class="setup-right">
+                <div class="input-group">
+                    <label>투표 참여자 수 (명)</label>
+                    <input type="number" id="voter-count" min="1" value="20">
+                </div>
+                
+                <div class="input-group">
+                    <label>1인당 투표 수</label>
+                    <input type="number" id="votes-per-person" min="1" value="1">
+                </div>
+
+                <div class="input-group">
+                    <label>투표 대기 시간 (초)</label>
+                    <p style="font-size: 14px; color: #7f8c8d; margin-bottom: 5px;">* 부정 클릭 및 실수 방지용 대기시간</p>
+                    <input type="number" id="vote-delay" min="0" value="3">
+                </div>
+
+                <div class="input-group" style="display: flex; align-items: center; gap: 15px; margin-top: 30px; background: #f9f9f9; padding: 15px; border-radius: 8px;">
+                    <input type="checkbox" id="use-countdown" checked style="width: 25px; height: 25px;">
+                    <label style="margin: 0; cursor: pointer;" for="use-countdown">결과 공개 시 효과<br>(카운트다운)</label>
+                </div>
+            </div>
+        </div>
+
+        <div class="setup-actions">
+            <button class="btn btn-secondary" onclick="showScreen('entry-screen')">← 뒤로 가기</button>
+            <button class="btn btn-outline" onclick="checkSetup()">준비 완료 🚀</button>
+        </div>
+    </div>
+
+    <div id="confirm-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="font-size: 28px;">설정 내용 확인</h3>
+            <p id="confirm-text" style="font-size: 20px; line-height: 1.8; margin-top: 20px;"></p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('confirm-modal')">수정하기</button>
+                <button class="btn" onclick="startVotingProcess()">이대로 시작!</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="guide-modal" class="modal-overlay" style="background: var(--primary);">
+        <h1 style="color: white; font-size: 50px;">📢 투표 안내</h1>
+        <h2 style="color: white; font-size: 40px; margin-top: 20px;">한 명씩 투표에 참여해 주세요.</h2>
+        <p id="guide-text" style="font-size: 26px; margin: 40px; text-align: center; line-height: 1.6; background: rgba(0,0,0,0.2); padding: 30px; border-radius: 12px;">
+            </p>
+        <button class="btn" style="background: white; color: var(--primary); max-width: 400px; margin: 0 auto; font-size: 28px; padding: 20px;" onclick="enterVotingRoom()">투표 시작하기</button>
+    </div>
+
+    <div id="voting-screen" class="container screen" style="max-width: 1000px;">
+        <h2 id="voting-title" style="font-size: 40px; color: #333;">투표 제목</h2>
+        <p style="text-align: center; color: #E74C3C; font-weight: bold; margin-bottom: 20px; font-size: 22px;">※ 한 번 투표하면 변경할 수 없습니다!</p>
+        
+        <p class="progress-text" id="progress-text">전체 00명 중 0명 완료</p>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+
+        <div id="voting-buttons" style="margin-top: 40px;">
+            </div>
+    </div>
+
+    <div id="next-voter-modal" class="modal-overlay">
+        <h2 style="font-size: 50px; color: white;">다음 투표 참여자는 나와 주세요</h2>
+        <p id="delay-text" style="font-size: 80px; margin-top: 30px; color: #f1c40f; font-weight: bold;">3</p>
+    </div>
+
+    <div id="end-screen" class="container screen">
+        <h1 style="font-size: 48px;">🎉 투표가 종료되었습니다!</h1>
+        <p style="text-align: center; margin-bottom: 40px; font-size: 24px;">모든 인원이 투표를 마쳤습니다.</p>
+        <button class="btn" style="font-size: 24px; padding: 20px; max-width: 300px; margin: 0 auto;" onclick="prepareResults()">결과 확인하기 📊</button>
+    </div>
+
+    <div id="countdown-modal" class="modal-overlay">
+        <div class="countdown-text" id="countdown-number">5</div>
+    </div>
+
+    <div id="result-screen" class="container screen" style="max-width: 800px;">
+        <h1>📊 투표 결과</h1>
+        <h3 id="result-title" style="color: #333; font-size: 32px;"></h3>
+        <p style="text-align: center; margin-bottom: 30px; font-size: 22px; color: #7f8c8d;" id="result-summary">전체: 0명 / 투표: 0표 / 기권: 0표</p>
+        
+        <div id="result-details" style="background: #f9f9f9; padding: 20px; border-radius: 12px;"></div>
+
+        <div id="winner-announcement" class="winner-text"></div>
+
+        <button class="btn btn-outline" style="margin: 40px auto 0; max-width: 300px;" onclick="resetToEntry()">첫 화면으로 돌아가기</button>
+    </div>
+
+    <div id="history-screen" class="container screen">
+        <h2>📂 이전 투표 결과</h2>
+        <p style="text-align: center; font-size: 16px; color: #7f8c8d; margin-bottom: 30px; background: #eee; padding: 10px; border-radius: 8px;">
+            💡 이 데이터는 사용 중인 기기(브라우저)에만 안전하게 저장됩니다.
+        </p>
+        <div id="history-list" class="items-container" style="max-height: 400px; padding-right:15px;"></div>
+        <button class="btn btn-secondary" style="margin-top: 30px; max-width: 250px; margin: 30px auto 0;" onclick="showScreen('entry-screen')">← 뒤로 가기</button>
+    </div>
+
+    <div id="history-detail-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="hd-title" style="font-size: 28px;"></h3>
+            <p id="hd-summary" style="margin-bottom: 25px; font-weight: bold; font-size: 20px; color: #7f8c8d; border-bottom: 2px solid #eee; padding-bottom: 15px;"></p>
+            <div id="hd-details"></div>
+            <button class="btn btn-secondary" style="margin-top: 30px;" onclick="closeModal('history-detail-modal')">닫기</button>
+        </div>
+    </div>
+
+    <div id="delete-confirm-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+            <h3 style="color: #E74C3C; font-size: 24px;">🗑️ 기록 삭제</h3>
+            <p id="delete-confirm-msg" style="font-size: 20px; margin: 20px 0;"></p>
+            <div class="modal-actions" style="margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="closeModal('delete-confirm-modal')">취소</button>
+                <button class="btn btn-danger" onclick="executeDelete()">삭제하기</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast">메시지</div>
+
+    <script>
+        let voteState = {
+            title: '', items: [], participants: 0, votesPerPerson: 1, delay: 3,
+            useCountdown: true, currentPersonIndex: 1, currentPersonVotesCast: 0,
+            abstentions: 0, totalVotesCast: 0
+        };
+
+        let targetDeleteId = null; 
+
+        let lastTouchTime = 0;
+        document.addEventListener('touchstart', () => { lastTouchTime = Date.now(); }, {passive: true});
+
+        window.onload = () => {
+            initItemInputs();
+            document.addEventListener('keydown', handleKeyPress);
+        };
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    showToast("전체화면 모드를 실행할 수 없습니다.");
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById("toast");
+            toast.innerText = msg;
+            toast.className = "show";
+            setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+        }
+
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+        function initItemInputs() {
+            const list = document.getElementById('items-list');
+            list.innerHTML = '';
+            for(let i=1; i<=3; i++) { appendItemRow(list, i); }
+        }
+
+        function addItemInput() {
+            const list = document.getElementById('items-list');
+            const count = list.children.length + 1;
+            appendItemRow(list, count);
+        }
+
+        function appendItemRow(container, index) {
+            const div = document.createElement('div');
+            div.className = 'item-input-box';
+            div.innerHTML = `
+                <span class="item-number">${index}.</span>
+                <input type="text" class="item-input" placeholder="항목 입력">
+                <button class="btn-remove" onclick="removeItemInput(this)" title="삭제">-</button>
+            `;
+            container.appendChild(div);
+            updateItemNumbers();
+        }
+
+        function removeItemInput(btn) {
+            const list = document.getElementById('items-list');
+            if (list.children.length <= 2) {
+                return showToast("항목은 최소 2개 이상이어야 합니다.");
+            }
+            btn.parentElement.remove();
+            updateItemNumbers();
+        }
+
+        function updateItemNumbers() {
+            const spans = document.querySelectorAll('#items-list .item-number');
+            spans.forEach((span, index) => { span.innerText = `${index + 1}.`; });
+        }
+
+        function checkSetup() {
+            const title = document.getElementById('vote-title').value.trim();
+            const inputs = document.querySelectorAll('.item-input');
+            const validItems = [];
+            
+            let count = 1;
+            inputs.forEach(input => {
+                const val = input.value.trim();
+                if(val) { validItems.push({ id: count++, name: val, votes: 0 }); }
+            });
+
+            const participants = parseInt(document.getElementById('voter-count').value);
+            const votesPP = parseInt(document.getElementById('votes-per-person').value);
+            const delay = parseInt(document.getElementById('vote-delay').value);
+
+            if(!title) return showToast("투표 제목을 입력해 주세요!");
+            if(validItems.length < 2) return showToast("최소 2개 이상의 항목(후보)을 입력해 주세요!");
+            if(participants < 1) return showToast("투표 참여자 수를 확인해 주세요!");
+
+            voteState = {
+                title, items: validItems, participants, votesPerPerson: votesPP, delay,
+                useCountdown: document.getElementById('use-countdown').checked,
+                currentPersonIndex: 1, currentPersonVotesCast: 0, abstentions: 0, totalVotesCast: 0
+            };
+
+            document.getElementById('confirm-text').innerHTML = `
+                <strong>제목:</strong> ${title}<br>
+                <strong>항목:</strong> ${validItems.length}개<br>
+                <strong>인원:</strong> ${participants}명 (1인당 ${votesPP}표)<br>
+                <strong>대기:</strong> ${delay}초
+            `;
+            openModal('confirm-modal');
+        }
+
+        function startVotingProcess() {
+            closeModal('confirm-modal');
+            
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => console.log(err));
+            }
+
+            showScreen('voting-screen');
+            
+            const guideText = document.getElementById('guide-text');
+            if (voteState.items.length <= 9) {
+                guideText.innerHTML = `
+                    👉 원하는 번호를 <strong style="color:#f1c40f;">자판(키보드) 숫자키</strong>나 <strong style="color:#f1c40f;">화면 터치</strong>로 선택해 주세요.<br>
+                    <span style="font-size:20px; color:#ddd; display:inline-block; margin-top:15px;">(※ 부정 클릭 방지를 위해 마우스는 사용할 수 없습니다)</span>
+                `;
+            } else {
+                guideText.innerHTML = `
+                    👉 원하는 항목을 <strong>마우스 클릭</strong>이나 <strong>터치</strong>로 선택해 주세요.<br>
+                    <span style="font-size:20px; color:#ddd; display:inline-block; margin-top:15px;">(※ 1~9번까지는 키보드 숫자키도 지원합니다)</span>
+                `;
+            }
+
+            openModal('guide-modal');
+            buildVotingScreen();
+        }
+
+        function buildVotingScreen() {
+            document.getElementById('voting-title').innerText = voteState.title;
+            const btnContainer = document.getElementById('voting-buttons');
+            btnContainer.innerHTML = '';
+
+            voteState.items.forEach(item => {
+                btnContainer.insertAdjacentHTML('beforeend', `
+                    <button class="btn vote-btn" onclick="handleVoteClick(event, ${item.id})">
+                        <strong>${item.id}.</strong> ${item.name}
+                    </button>
+                `);
+            });
+            btnContainer.insertAdjacentHTML('beforeend', `
+                <button class="btn vote-btn vote-btn-abstain" onclick="handleVoteClick(event, 0)">
+                    0. 기권
+                </button>
+            `);
+            updateProgress();
+        }
+
+        let isVotingLocked = false;
+
+        function enterVotingRoom() { closeModal('guide-modal'); }
+
+        function handleKeyPress(e) {
+            if(document.getElementById('voting-screen').classList.contains('active') && !isVotingLocked && document.getElementById('guide-modal').style.display !== 'flex') {
+                const key = e.key;
+                if(key >= '0' && key <= '9') {
+                    const id = parseInt(key);
+                    if(id === 0 || voteState.items.find(item => item.id === id)) {
+                        castVote(id);
+                    }
+                }
+            }
+        }
+
+        function handleVoteClick(e, itemId) {
+            if (voteState.items.length <= 9) {
+                const isTouch = (Date.now() - lastTouchTime < 500) || e.pointerType === 'touch';
+                const isKeyboard = e.detail === 0 && !e.pointerType;
+                
+                if (!isTouch && !isKeyboard) {
+                    e.preventDefault();
+                    showToast("마우스 클릭 제한 중입니다. 키보드 숫자키나 화면 터치를 이용해 주세요! 🚫");
+                    return;
+                }
+            }
+            castVote(itemId);
+        }
+
+        function castVote(itemId) {
+            if(isVotingLocked) return;
+
+            if(itemId === 0) {
+                voteState.abstentions++;
+            } else {
+                const target = voteState.items.find(i => i.id === itemId);
+                if(target) target.votes++;
+            }
+            
+            voteState.totalVotesCast++;
+            voteState.currentPersonVotesCast++;
+
+            if(voteState.currentPersonVotesCast >= voteState.votesPerPerson) {
+                if(voteState.currentPersonIndex >= voteState.participants) {
+                    updateProgress();
+                    setTimeout(() => showScreen('end-screen'), 500);
+                } else {
+                    voteState.currentPersonIndex++;
+                    voteState.currentPersonVotesCast = 0;
+                    updateProgress();
+                    triggerNextVoterDelay();
+                }
+            } else {
+                showToast(`[${voteState.currentPersonVotesCast}/${voteState.votesPerPerson}표] 다음 표를 행사해주세요.`);
+            }
+        }
+
+        function triggerNextVoterDelay() {
+            isVotingLocked = true;
+            openModal('next-voter-modal');
+            let timeLeft = voteState.delay;
+            const delayText = document.getElementById('delay-text');
+            
+            delayText.innerText = timeLeft;
+            
+            const timer = setInterval(() => {
+                timeLeft--;
+                if(timeLeft > 0) {
+                    delayText.innerText = timeLeft;
+                } else {
+                    clearInterval(timer);
+                    closeModal('next-voter-modal');
+                    isVotingLocked = false;
+                }
+            }, 1000);
+        }
+
+        function updateProgress() {
+            const percent = ((voteState.currentPersonIndex - 1) / voteState.participants) * 100;
+            document.getElementById('progress-fill').style.width = `${percent}%`;
+            document.getElementById('progress-text').innerText = `전체 ${voteState.participants}명 중 ${voteState.currentPersonIndex - 1}명 완료`;
+        }
+
+        function playBeep(highPitch = false) {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                osc.connect(ctx.destination);
+                osc.frequency.value = highPitch ? 1000 : 600; 
+                osc.type = 'sine';
+                osc.start();
+                setTimeout(() => { osc.stop(); }, 200);
+            } catch(e) { console.log("오디오 미지원 환경"); }
+        }
+
+        function prepareResults() {
+            if(voteState.useCountdown) {
+                openModal('countdown-modal');
+                let count = 5;
+                const numberEl = document.getElementById('countdown-number');
+                numberEl.innerText = count;
+                playBeep();
+
+                const cTimer = setInterval(() => {
+                    count--;
+                    if(count > 0) {
+                        numberEl.innerText = count;
+                        playBeep();
+                    } else {
+                        clearInterval(cTimer);
+                        playBeep(true); 
+                        closeModal('countdown-modal');
+                        showFinalResults();
+                    }
+                }, 1000);
+            } else {
+                showFinalResults();
+            }
+        }
+
+        function showFinalResults() {
+            showScreen('result-screen');
+            document.getElementById('result-title').innerText = voteState.title;
+            document.getElementById('result-summary').innerText = `전체 인원: ${voteState.participants}명 / 총 투표수: ${voteState.totalVotesCast}표 / 기권: ${voteState.abstentions}표`;
+
+            const detailContainer = document.getElementById('result-details');
+            detailContainer.innerHTML = '';
+
+            const maxVotes = voteState.items.length > 0 ? Math.max(...voteState.items.map(i => i.votes)) : 0;
+            const winners = voteState.items.filter(i => i.votes === maxVotes && maxVotes > 0);
+
+            voteState.items.forEach(item => {
+                const isWinner = (item.votes === maxVotes && maxVotes > 0);
+                const highlightClass = isWinner ? 'winner-highlight' : '';
+                
+                detailContainer.insertAdjacentHTML('beforeend', `
+                    <div class="result-item ${highlightClass}">
+                        <strong>${item.id}. ${item.name}</strong>
+                        <span>${item.votes} 표</span>
+                    </div>
+                `);
+            });
+
+            if(maxVotes === 0) {
+                document.getElementById('winner-announcement').innerText = "모두 0표입니다.";
+            } else {
+                const winnerNames = winners.map(w => w.name).join("', '");
+                if (winners.length > 1) {
+                    document.getElementById('winner-announcement').innerText = `'${winnerNames}' 동점입니다! 😲`;
+                } else {
+                    document.getElementById('winner-announcement').innerText = `🎉 '${winnerNames}' 당선(선정)을 축하합니다! 🎉`;
+                }
+            }
+
+            saveToLocalStorage();
+        }
+
+        function resetToEntry() {
+            document.getElementById('vote-title').value = '';
+            document.getElementById('voter-count').value = '20';
+            initItemInputs();
+            
+            if (document.fullscreenElement) {
+                document.exitFullscreen().catch(err => console.log(err));
+            }
+            
+            showScreen('entry-screen');
+        }
+
+        function saveToLocalStorage() {
+            const record = {
+                id: Date.now(),
+                date: new Date().toLocaleDateString(),
+                title: voteState.title,
+                participants: voteState.participants,
+                totalVotesCast: voteState.totalVotesCast,
+                abstentions: voteState.abstentions,
+                items: voteState.items
+            };
+
+            let history = JSON.parse(localStorage.getItem('classVotingHistory') || '[]');
+            history.push(record);
+            localStorage.setItem('classVotingHistory', JSON.stringify(history));
+        }
+
+        function loadHistory() {
+            showScreen('history-screen');
+            const historyList = document.getElementById('history-list');
+            historyList.innerHTML = '';
+
+            let history = JSON.parse(localStorage.getItem('classVotingHistory') || '[]');
+            
+            if(history.length === 0) {
+                historyList.innerHTML = '<p style="text-align:center; color:#7f8c8d; font-size:20px;">저장된 투표 기록이 없습니다.</p>';
+                return;
+            }
+
+            history.reverse().forEach(record => {
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                div.innerHTML = `
+                    <div class="history-info" onclick='openHistoryDetail(${JSON.stringify(record)})'>
+                        <strong>${record.title}</strong><br>
+                        <span style="font-size: 16px; color: #7f8c8d;">${record.date} 진행</span>
+                    </div>
+                    <button class="btn btn-danger" style="width: auto; padding: 10px 20px; margin-top: 0; font-size:18px;" onclick="confirmDelete(${record.id}, '${record.title}')">지우기</button>
+                `;
+                historyList.appendChild(div);
+            });
+        }
+
+        function openHistoryDetail(record) {
+            document.getElementById('hd-title').innerText = record.title;
+            document.getElementById('hd-summary').innerText = `인원: ${record.participants}명 / 투표: ${record.totalVotesCast}표 / 기권: ${record.abstentions}표`;
+            
+            const detailContainer = document.getElementById('hd-details');
+            detailContainer.innerHTML = '';
+
+            record.items.forEach(item => {
+                detailContainer.insertAdjacentHTML('beforeend', `
+                    <div class="result-item" style="padding: 10px 0; border:none;">
+                        <span>${item.id}. ${item.name}</span>
+                        <strong>${item.votes} 표</strong>
+                    </div>
+                `);
+            });
+
+            openModal('history-detail-modal');
+        }
+
+        function confirmDelete(id, title) {
+            targetDeleteId = id;
+            document.getElementById('delete-confirm-msg').innerHTML = `정말 <strong>'${title}'</strong> 기록을<br>삭제하시겠습니까?`;
+            openModal('delete-confirm-modal');
+        }
+
+        function executeDelete() {
+            if(targetDeleteId) {
+                let history = JSON.parse(localStorage.getItem('classVotingHistory') || '[]');
+                history = history.filter(record => record.id !== targetDeleteId);
+                localStorage.setItem('classVotingHistory', JSON.stringify(history));
+                
+                closeModal('delete-confirm-modal');
+                loadHistory(); 
+                showToast("기록이 안전하게 삭제되었습니다.");
+                targetDeleteId = null;
+            }
+        }
+    </script>
+</body>
+</html>
