@@ -165,10 +165,13 @@
         #result-details {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            justify-content: center;
+            gap: 15px; 
             background: transparent;
             border: none;
             padding: 0;
+            height: 100%;
+            min-height: 400px;
         }
 
         .result-right-panel {
@@ -192,17 +195,19 @@
             .result-grid { grid-template-columns: 1fr; }
             .result-screen { overflow-y: auto; max-height: none; }
         }
+
         .result-item.winner-highlight { 
-    background-color: rgba(124, 144, 63, 0.1); color: var(--primary); font-weight: bold; border-left: 6px solid var(--primary); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); 
-    border-bottom: 2px solid transparent; 
-}
-.winner-text { 
-    font-size: 36px; color: var(--text-main); font-weight: bold; text-align: center; margin: 40px 0; background: var(--warm-gray-light); padding: 20px; border-radius: 8px; opacity: 0; transition: opacity 0.5s;
-    min-height: 135px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
+            background-color: rgba(124, 144, 63, 0.1); color: var(--primary); font-weight: bold; border-left: 6px solid var(--primary); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); 
+            border-bottom: 2px solid transparent; 
+        }
+
+        .winner-text { 
+            font-size: 36px; color: var(--text-main); font-weight: bold; text-align: center; margin: 40px 0; background: var(--warm-gray-light); padding: 20px; border-radius: 8px; opacity: 0; transition: opacity 0.5s;
+            min-height: 135px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
 
         .history-item { border: 2px solid var(--warm-gray-light); padding: 20px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;}
         .history-info { cursor: pointer; flex-grow: 1; font-size: 22px; }
@@ -239,6 +244,9 @@
                 repeating-linear-gradient(-85deg, transparent, transparent 3px, rgba(0,0,0,0.15) 4px, rgba(0,0,0,0.15) 6px);
         }
         .result-item-info { display: flex; justify-content: space-between; font-weight: bold; width: 100%; }
+
+        /* 블랙아웃 화면 하단 안내 텍스트 깜빡임 애니메이션 */
+        @keyframes pulse-blink { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
 
     </style>
 </head>
@@ -355,7 +363,7 @@
         <div class="countdown-text" id="countdown-number">5</div>
     </div>
 
-<div id="result-screen" class="container screen" style="max-width: 1000px;">
+    <div id="result-screen" class="container screen" style="max-width: 1000px;">
         <h1>📊 투표 결과</h1>
         
         <div class="result-grid">
@@ -371,6 +379,17 @@
 
                 <button class="btn btn-outline" style="width: 100%;" onclick="resetToEntry()">첫 화면으로 돌아가기</button>
             </div>
+        </div>
+    </div>
+
+    <div id="grand-winner-modal" class="modal-overlay" style="background: rgba(0,0,0,0.92); z-index: 9000; cursor: pointer;" onclick="closeModal('grand-winner-modal')">
+        <button style="position: absolute; top: 30px; right: 30px; background: transparent; color: rgba(255,255,255,0.6); border: none; font-size: 50px; cursor: pointer; transition: color 0.3s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.6)'">&times;</button>
+        <div style="text-align: center; pointer-events: none;">
+            <div id="grand-winner-name" style="font-size: 70px; font-weight: bold; color: white; margin-bottom: 30px; word-break: keep-all; line-height: 1.3;"></div>
+            <div id="grand-winner-msg" style="font-size: 45px; color: white;">당선을 축하합니다🎉</div>
+        </div>
+        <div style="position: absolute; bottom: 50px; color: #aaa; font-size: 22px; font-weight: bold; pointer-events: none; animation: pulse-blink 2s infinite;">
+            화면을 클릭하면 결과 창으로 이동합니다
         </div>
     </div>
 
@@ -782,6 +801,8 @@ function buildVotingScreen() {
                 itemPadding = "4px 10px"; fontSize = "16px"; barHeight = "12px";
             } else if (itemCount > 6) {
                 itemPadding = "6px 12px"; fontSize = "18px"; barHeight = "16px";
+            } else if (itemCount <= 3) {
+                itemPadding = "25px 20px"; fontSize = "28px"; barHeight = "25px";
             }
 
             voteState.items.forEach(item => {
@@ -810,9 +831,8 @@ function buildVotingScreen() {
                 }
 
                 voteState.items.forEach(item => {
-
                     const displayVotes = Math.min(currentTick, item.votes);
-            const percent = validVotes === 0 ? 0 : Math.round((displayVotes / validVotes) * 100);
+                    const percent = validVotes === 0 ? 0 : Math.round((displayVotes / validVotes) * 100);
                     
                     document.getElementById(`result-text-${item.id}`).innerText = `${displayVotes}표 (${percent}%)`;
                     document.getElementById(`result-bar-${item.id}`).style.width = `${percent}%`;
@@ -822,7 +842,6 @@ function buildVotingScreen() {
                     clearInterval(animInterval);
 
                     setTimeout(() => {
-
                         voteState.items.forEach(item => {
                             if (item.votes === maxVotes && maxVotes > 0) {
                                 document.getElementById(`result-item-${item.id}`).classList.add('winner-highlight');
@@ -835,20 +854,30 @@ function buildVotingScreen() {
                             const winnerNames = winners.map(w => w.name).join("', '");
                             
                             if (winners.length > 1) {
+                                document.getElementById('grand-winner-name').innerText = `'${winnerNames}'`;
+                                document.getElementById('grand-winner-msg').innerText = "동점입니다! 😲";
+                                openModal('grand-winner-modal');
+
                                 winnerAnnouncement.innerHTML = `
                                     '${winnerNames}'
                                     <span style="font-size: 20px; font-weight: normal; display: block; margin-top: 10px; color: var(--warm-gray-hover);">
                                         동점입니다! 😲
                                     </span>`;
+                                    
+                                confetti({ particleCount: 150, spread: 80, origin: { x: 0.5, y: 0.6 }, zIndex: 99999 }); // 동점일 때도 중앙 폭죽
                             } else {
+                                document.getElementById('grand-winner-name').innerText = `'${winnerNames}'`;
+                                document.getElementById('grand-winner-msg').innerText = "당선을 축하합니다🎉";
+                                openModal('grand-winner-modal');
+
                                 winnerAnnouncement.innerHTML = `
                                     '${winnerNames}'
                                     <span style="font-size: 22px; font-weight: normal; display: block; margin-top: 10px;">
                                         당선을 축하합니다🎉
                                     </span>`;
 
-                                confetti({ particleCount: 150, spread: 80, origin: { x: 0, y: 0.6 }, angle: 60, zIndex: 9999 });
-                                confetti({ particleCount: 150, spread: 80, origin: { x: 1, y: 0.6 }, angle: 120, zIndex: 9999 });
+                                confetti({ particleCount: 200, spread: 100, origin: { x: 0, y: 0.6 }, angle: 60, zIndex: 99999 });
+                                confetti({ particleCount: 200, spread: 100, origin: { x: 1, y: 0.6 }, angle: 120, zIndex: 99999 });
                             }
                         }
 
