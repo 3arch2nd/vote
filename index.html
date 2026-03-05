@@ -132,9 +132,66 @@
         .vote-btn-abstain { border-color: var(--warm-gray); color: var(--warm-gray-hover); margin-top: 30px; background-color: transparent; text-align: center; }
         .vote-btn-abstain:hover { background-color: rgba(154, 146, 134, 0.1); }
 
+        #voting-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+        }
+
+        #voting-buttons.grid-mode {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        #voting-buttons.grid-mode .vote-btn-abstain {
+            margin-top: 0;
+        }
+
+        #voting-screen {
+            overflow: hidden; 
+            max-height: 95vh;         }
+
         .countdown-text { font-size: 150px; font-weight: bold; color: white; }
 
-        .result-item { display: flex; justify-content: space-between; padding: 15px 20px; border-bottom: 2px solid var(--warm-gray-light); font-size: 24px; transition: background 0.3s; }
+        .result-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+
+        #result-details {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: transparent;
+            border: none;
+            padding: 0;
+        }
+
+        .result-right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            height: 100%;
+            justify-content: center;
+        }
+
+        .result-item {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 10px 15px;
+            border-bottom: 2px solid var(--warm-gray-light);
+            transition: all 0.3s;
+        }
+
+        @media (max-width: 768px) {
+            .result-grid { grid-template-columns: 1fr; }
+            .result-screen { overflow-y: auto; max-height: none; }
+        }
         .result-item.winner-highlight { background-color: rgba(124, 144, 63, 0.1); color: var(--primary); font-weight: bold; border-left: 6px solid var(--primary); border-bottom: none; margin-bottom: 5px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
         .winner-text { font-size: 36px; color: var(--text-main); font-weight: bold; text-align: center; margin: 40px 0; background: var(--warm-gray-light); padding: 20px; border-radius: 8px; }
 
@@ -289,21 +346,28 @@
         <div class="countdown-text" id="countdown-number">5</div>
     </div>
 
-    <div id="result-screen" class="container screen" style="max-width: 800px;">
+<div id="result-screen" class="container screen" style="max-width: 1000px;">
         <h1>📊 투표 결과</h1>
-        <h3 id="result-title" style="color: var(--text-main); font-size: 32px;"></h3>
-        <p style="text-align: center; margin-bottom: 30px; font-size: 22px;" id="result-summary">전체: 0명 / 투표: 0표 / 기권: 0표</p>
         
-        <div id="result-details" style="background: transparent; border: 2px solid var(--warm-gray-light); padding: 20px;"></div>
+        <div class="result-grid">
+            <div id="result-details"></div>
 
-        <div id="winner-announcement" class="winner-text"></div>
+            <div class="result-right-panel">
+                <div>
+                    <h3 id="result-title" style="color: var(--text-main); font-size: 28px; margin-bottom: 10px;"></h3>
+                    <p id="result-summary" style="font-size: 18px; color: var(--warm-gray-hover); line-height: 1.6;"></p>
+                </div>
 
-        <button class="btn btn-outline" style="margin: 40px auto 0; max-width: 300px;" onclick="resetToEntry()">첫 화면으로 돌아가기</button>
+                <div id="winner-announcement" class="winner-text" style="margin: 0; font-size: 28px;"></div>
+
+                <button class="btn btn-outline" style="width: 100%;" onclick="resetToEntry()">첫 화면으로 돌아가기</button>
+            </div>
+        </div>
     </div>
 
     <div id="history-screen" class="container screen">
         <h2>📂 이전 투표 결과</h2>
-        <p style="text-align: center; font-size: 16px; color: var(--warm-gray-hover); margin-bottom: 30px; background: var(--warm-gray-light); padding: 10px;">
+        <p style="text-align: center; font-size: 16px; margin-bottom: 30px; background: var(--warm-gray-light); padding: 10px;">
             💡 이 데이터는 사용 중인 기기(브라우저)에만 안전하게 저장됩니다.
         </p>
         <div id="history-list" class="items-container" style="max-height: 400px; padding-right:15px;"></div>
@@ -479,23 +543,56 @@ function startVotingProcess() {
             buildVotingScreen();
         }
 
-        function buildVotingScreen() {
+function buildVotingScreen() {
             document.getElementById('voting-title').innerText = voteState.title;
             const btnContainer = document.getElementById('voting-buttons');
             btnContainer.innerHTML = '';
 
+            const totalItems = voteState.items.length + 1; 
+            if (totalItems > 6) {
+                btnContainer.classList.add('grid-mode');
+            } else {
+                btnContainer.classList.remove('grid-mode');
+            }
+
+            let padding = "20px 30px";
+            let fontSize = "28px";
+            let margin = "0 0 15px 0";
+
+            if (totalItems > 6) {
+                if (totalItems > 12) {
+                    padding = "10px 15px"; fontSize = "18px"; margin = "0";
+                } else {
+                    padding = "15px 20px"; fontSize = "22px"; margin = "0";
+                }
+            } else {
+                if (totalItems === 6) {
+                    padding = "10px 30px"; margin = "0 0 8px 0"; 
+                } else if (totalItems === 5) {
+                    padding = "14px 30px"; margin = "0 0 10px 0";
+                } else {
+                    padding = "20px 30px"; margin = "0 0 15px 0"; 
+                }
+            }
+
             voteState.items.forEach(item => {
                 btnContainer.insertAdjacentHTML('beforeend', `
-                    <button class="btn vote-btn" onclick="handleVoteClick(event, ${item.id})">
+                    <button class="btn vote-btn" 
+                            style="padding: ${padding}; font-size: ${fontSize}; margin: ${margin};" 
+                            onclick="handleVoteClick(event, ${item.id})">
                         <strong>${item.id}.</strong> ${item.name}
                     </button>
                 `);
             });
+
             btnContainer.insertAdjacentHTML('beforeend', `
-                <button class="btn vote-btn vote-btn-abstain" onclick="handleVoteClick(event, 0)">
+                <button class="btn vote-btn vote-btn-abstain" 
+                        style="padding: ${padding}; font-size: ${fontSize}; margin: ${margin};" 
+                        onclick="handleVoteClick(event, 0)">
                     0. 기권
                 </button>
             `);
+
             updateProgress();
         }
 
@@ -644,7 +741,11 @@ function startVotingProcess() {
             
             showScreen('result-screen');
             document.getElementById('result-title').innerText = voteState.title;
-            document.getElementById('result-summary').innerText = `전체 인원: ${voteState.participants}명 / 총 투표수: ${voteState.totalVotesCast}표 / 기권: ${voteState.abstentions}표`;
+            document.getElementById('result-summary').innerHTML = `
+                <strong>참여:</strong> ${voteState.participants}명<br>
+                <strong>투표:</strong> ${voteState.totalVotesCast}표<br>
+                <strong>기권:</strong> ${voteState.abstentions}표
+            `;
 
             const detailContainer = document.getElementById('result-details');
             detailContainer.innerHTML = '';
@@ -652,34 +753,53 @@ function startVotingProcess() {
             const maxVotes = voteState.items.length > 0 ? Math.max(...voteState.items.map(i => i.votes)) : 0;
             const winners = voteState.items.filter(i => i.votes === maxVotes && maxVotes > 0);
 
+            const itemCount = voteState.items.length;
+            let itemPadding = "10px 15px";
+            let fontSize = "22px";
+            let barHeight = "20px";
+
+            if (itemCount > 10) {
+                itemPadding = "4px 10px"; fontSize = "16px"; barHeight = "12px";
+            } else if (itemCount > 6) {
+                itemPadding = "6px 12px"; fontSize = "18px"; barHeight = "16px";
+            }
+
             voteState.items.forEach(item => {
                 const isWinner = (item.votes === maxVotes && maxVotes > 0);
                 const highlightClass = isWinner ? 'winner-highlight' : '';
-
                 const percent = voteState.totalVotesCast === 0 ? 0 : Math.round((item.votes / voteState.totalVotesCast) * 100);
                 
                 detailContainer.insertAdjacentHTML('beforeend', `
-                    <div class="result-item ${highlightClass}" style="display: block;">
-                        <div class="result-item-info">
+                    <div class="result-item ${highlightClass}" style="padding: ${itemPadding};">
+                        <div class="result-item-info" style="font-size: ${fontSize};">
                             <span>${item.id}. ${item.name}</span>
                             <span>${item.votes}표 (${percent}%)</span>
                         </div>
-                        <div class="result-bar-container">
+                        <div class="result-bar-container" style="height: ${barHeight}; margin-top: 5px;">
                             <div class="result-bar-fill" style="width: ${percent}%;"></div>
                         </div>
                     </div>
                 `);
             });
 
-            if(maxVotes === 0) {
+if(maxVotes === 0) {
                 document.getElementById('winner-announcement').innerText = "모두 0표입니다.";
             } else {
                 const winnerNames = winners.map(w => w.name).join("', '");
+                
                 if (winners.length > 1) {
-                    document.getElementById('winner-announcement').innerText = `'${winnerNames}' 동점입니다! 😲`;
+                    document.getElementById('winner-announcement').innerHTML = `
+                        '${winnerNames}'
+                        <span style="font-size: 20px; font-weight: normal; display: block; margin-top: 10px; color: var(--warm-gray-hover);">
+                            동점입니다! 😲
+                        </span>`;
                 } else {
-                    document.getElementById('winner-announcement').innerText = `'${winnerNames}' 당선을 축하합니다🎉`;
-                    
+                    document.getElementById('winner-announcement').innerHTML = `
+                        '${winnerNames}'
+                        <span style="font-size: 22px; font-weight: normal; display: block; margin-top: 10px;">
+                            당선을 축하합니다🎉
+                        </span>`;
+
                     confetti({ particleCount: 150, spread: 80, origin: { x: 0, y: 0.6 }, angle: 60, zIndex: 9999 });
                     confetti({ particleCount: 150, spread: 80, origin: { x: 1, y: 0.6 }, angle: 120, zIndex: 9999 });
                 }
