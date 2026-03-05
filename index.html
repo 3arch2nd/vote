@@ -165,13 +165,13 @@
         #result-details {
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: center; 
             gap: 15px; 
             background: transparent;
             border: none;
             padding: 0;
-            height: 100%;
-            min-height: 400px;
+            height: 100%; 
+            min-height: 400px; 
         }
 
         .result-right-panel {
@@ -245,7 +245,6 @@
         }
         .result-item-info { display: flex; justify-content: space-between; font-weight: bold; width: 100%; }
 
-        /* 블랙아웃 화면 하단 안내 텍스트 깜빡임 애니메이션 */
         @keyframes pulse-blink { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
 
     </style>
@@ -405,9 +404,11 @@
     <div id="history-detail-modal" class="modal-overlay">
         <div class="modal-content">
             <h3 id="hd-title" style="font-size: 28px;"></h3>
-            <p id="hd-summary" style="margin-bottom: 25px; font-weight: bold; font-size: 20px; color: var(--warm-gray-hover); border-bottom: 2px solid var(--warm-gray-light); padding-bottom: 15px;"></p>
-            <div id="hd-details"></div>
-            <button class="btn btn-secondary" style="margin-top: 30px;" onclick="closeModal('history-detail-modal')">닫기</button>
+            <p id="hd-summary" style="margin-bottom: 20px; font-weight: bold; font-size: 18px; color: var(--warm-gray-hover); border-bottom: 2px solid var(--warm-gray-light); padding-bottom: 15px;"></p>
+            
+            <div id="hd-details" class="items-container" style="max-height: 350px; padding-right: 10px;"></div>
+            
+            <button class="btn btn-secondary" style="margin-top: 25px;" onclick="closeModal('history-detail-modal')">닫기</button>
         </div>
     </div>
 
@@ -562,7 +563,7 @@ function startVotingProcess() {
             if (voteState.items.length <= 9) {
                 guideText.innerHTML = `
                     👉 원하는 번호를 <strong style="text-decoration: underline 3px solid white; text-underline-offset: 4px;">자판(키보드) 숫자키</strong>나 <strong style="text-decoration: underline 3px solid white; text-underline-offset: 4px;">화면 터치</strong>로 선택해 주세요.<br>
-                    <span style="font-size:20px; color:rgba(255,255,255,0.7); display:inline-block; margin-top:15px;">(※ 부정 클릭 방지를 위해 마우스는 사용할 수 없습니다)</span>
+                    <span style="font-size:20px; color:rgba(255,255,255,0.7); display:inline-block; margin-top:15px;">(※ 클릭 방지를 위해 마우스는 사용할 수 없습니다)</span>
                 `;
             } else {
                 guideText.innerHTML = `
@@ -802,7 +803,7 @@ function buildVotingScreen() {
             } else if (itemCount > 6) {
                 itemPadding = "6px 12px"; fontSize = "18px"; barHeight = "16px";
             } else if (itemCount <= 3) {
-                itemPadding = "25px 20px"; fontSize = "28px"; barHeight = "25px";
+                itemPadding = "25px 20px"; fontSize = "28px"; barHeight = "25px"; 
             }
 
             voteState.items.forEach(item => {
@@ -864,7 +865,7 @@ function buildVotingScreen() {
                                         동점입니다! 😲
                                     </span>`;
                                     
-                                confetti({ particleCount: 150, spread: 80, origin: { x: 0.5, y: 0.6 }, zIndex: 99999 }); // 동점일 때도 중앙 폭죽
+                                confetti({ particleCount: 150, spread: 80, origin: { x: 0.5, y: 0.6 }, zIndex: 99999 }); 
                             } else {
                                 document.getElementById('grand-winner-name').innerText = `'${winnerNames}'`;
                                 document.getElementById('grand-winner-msg').innerText = "당선을 축하합니다🎉";
@@ -884,7 +885,7 @@ function buildVotingScreen() {
                         winnerAnnouncement.style.opacity = '1';
                     }, 600);
                 }
-            }, 1000);
+            }, 1000); 
         }
 
         function resetToEntry() {
@@ -945,16 +946,31 @@ function buildVotingScreen() {
             const validVotesHistory = record.totalVotesCast - record.abstentions; 
             
             document.getElementById('hd-title').innerText = record.title;
-            document.getElementById('hd-summary').innerText = `선거인수: ${record.participants}명 / 투표자수: ${validVotesHistory}명 / 기권자수: ${record.abstentions}명`;
+            document.getElementById('hd-summary').innerHTML = `
+                선거인수: ${record.participants}명 &nbsp;|&nbsp; 
+                투표자수: ${validVotesHistory}명 &nbsp;|&nbsp; 
+                기권자수: ${record.abstentions}명
+            `;
             
             const detailContainer = document.getElementById('hd-details');
             detailContainer.innerHTML = '';
 
+            const maxVotes = record.items.length > 0 ? Math.max(...record.items.map(i => i.votes)) : 0;
+
             record.items.forEach(item => {
+                const percent = validVotesHistory === 0 ? 0 : Math.round((item.votes / validVotesHistory) * 100);
+                const isWinner = (item.votes === maxVotes && maxVotes > 0);
+                const highlightClass = isWinner ? 'winner-highlight' : '';
+
                 detailContainer.insertAdjacentHTML('beforeend', `
-                    <div class="result-item" style="padding: 10px 0; border:none;">
-                        <span>${item.id}. ${item.name}</span>
-                        <strong>${item.votes} 표</strong>
+                    <div class="result-item ${highlightClass}" style="padding: 8px 12px; margin-bottom: 6px;">
+                        <div class="result-item-info" style="font-size: 18px;">
+                            <span>${item.id}. ${item.name}</span>
+                            <span>${item.votes}표 (${percent}%)</span>
+                        </div>
+                        <div class="result-bar-container" style="height: 12px; margin-top: 5px; background-color: var(--warm-gray-light);">
+                            <div class="result-bar-fill" style="width: ${percent}%; transition: none;"></div>
+                        </div>
                     </div>
                 `);
             });
