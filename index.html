@@ -759,10 +759,12 @@ function buildVotingScreen() {
 
             showScreen('result-screen');
             document.getElementById('result-title').innerText = voteState.title;
+            const validVotes = voteState.totalVotesCast - voteState.abstentions;
+
             document.getElementById('result-summary').innerHTML = `
-                <strong>참여:</strong> ${voteState.participants}명<br>
-                <strong>투표:</strong> ${voteState.totalVotesCast}표<br>
-                <strong>기권:</strong> ${voteState.abstentions}표
+                <strong>선거인수:</strong> ${voteState.participants}명<br>
+                <strong>투표자수:</strong> ${validVotes}명<br>
+                <strong>기권자수:</strong> ${voteState.abstentions}명
             `;
 
             const detailContainer = document.getElementById('result-details');
@@ -810,7 +812,7 @@ function buildVotingScreen() {
                 voteState.items.forEach(item => {
 
                     const displayVotes = Math.min(currentTick, item.votes);
-                    const percent = voteState.totalVotesCast === 0 ? 0 : Math.round((displayVotes / voteState.totalVotesCast) * 100);
+            const percent = validVotes === 0 ? 0 : Math.round((displayVotes / validVotes) * 100);
                     
                     document.getElementById(`result-text-${item.id}`).innerText = `${displayVotes}표 (${percent}%)`;
                     document.getElementById(`result-bar-${item.id}`).style.width = `${percent}%`;
@@ -911,8 +913,10 @@ function buildVotingScreen() {
         }
 
         function openHistoryDetail(record) {
+            const validVotesHistory = record.totalVotesCast - record.abstentions; 
+            
             document.getElementById('hd-title').innerText = record.title;
-            document.getElementById('hd-summary').innerText = `인원: ${record.participants}명 / 투표: ${record.totalVotesCast}표 / 기권: ${record.abstentions}표`;
+            document.getElementById('hd-summary').innerText = `선거인수: ${record.participants}명 / 투표자수: ${validVotesHistory}명 / 기권자수: ${record.abstentions}명`;
             
             const detailContainer = document.getElementById('hd-details');
             detailContainer.innerHTML = '';
