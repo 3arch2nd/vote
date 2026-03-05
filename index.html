@@ -371,9 +371,14 @@
                 currentPersonIndex: 1, currentPersonVotesCast: 0, abstentions: 0, totalVotesCast: 0
             };
 
+            const itemNames = validItems.map(item => `${item.id}. ${item.name}`).join(' / ');
+
             document.getElementById('confirm-text').innerHTML = `
                 <strong>제목:</strong> ${title}<br>
                 <strong>항목:</strong> ${validItems.length}개<br>
+                <div style="font-size: 16px; color: var(--primary); margin: 5px 0 15px 10px; line-height: 1.4; word-break: keep-all;">
+                    👉 ${itemNames}
+                </div>
                 <strong>인원:</strong> ${participants}명 (1인당 ${votesPP}표)<br>
                 <strong>대기:</strong> ${delay}초
             `;
