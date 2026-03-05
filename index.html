@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>우리 반 투표 프로그램</title>
     <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
     <style>
         :root {
             --primary: #4A90E2;
@@ -98,7 +99,13 @@
         .fullscreen-toggle { position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.5); color: white; border: none; padding: 10px 15px; border-radius: 8px; cursor: pointer; z-index: 1000; font-size: 16px; transition: background 0.3s; }
         .fullscreen-toggle:hover { background: rgba(0,0,0,0.8); }
 
-        .copyright { position: fixed; bottom: 15px; width: 100%; text-align: center; color: #bdc3c7; font-size: 12px; pointer-events: none; z-index: 1; }
+        .copyright { position: fixed; bottom: 15px; width: 100%; text-align: center; color: #bdc3c7; font-size: 14px; pointer-events: none; z-index: 1; }
+
+        .result-bar-container { width: 100%; background-color: #e0e0e0; border-radius: 8px; height: 20px; margin-top: 12px; overflow: hidden; }
+        .result-bar-fill { height: 100%; background-color: var(--primary); width: 0%; transition: width 1s ease-in-out; }
+        .result-item-info { display: flex; justify-content: space-between; font-weight: bold; width: 100%; }
+        .winner-highlight .result-bar-fill { background-color: #f1c40f; } /* 당선자 막대 색상 */
+
     </style>
 </head>
 <body>
@@ -503,6 +510,27 @@
             document.getElementById('progress-text').innerText = `전체 ${voteState.participants}명 중 ${voteState.currentPersonIndex - 1}명 완료`;
         }
 
+        let drumPlayer;
+
+        const tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        function onYouTubeIframeAPIReady() {
+            drumPlayer = new YT.Player('youtube-drum-player', {
+                height: '0',
+                width: '0',
+                videoId: 'mzAfTmC3It0',
+                playerVars: {
+                    'autoplay': 0,
+                    'controls': 0,
+                    'rel': 0,
+                    'fs': 0
+                }
+            });
+        }
+
         function playBeep(highPitch = false) {
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -512,7 +540,18 @@
                 osc.type = 'sine';
                 osc.start();
                 setTimeout(() => { osc.stop(); }, 200);
-            } catch(e) { console.log("오디오 미지원 환경"); }
+            } catch(e) {}
+        }
+
+        const drumAudio = new Audio('DR.mp3');
+
+        function playDrumRoll() {
+            try {
+                drumAudio.currentTime = 0; 
+                drumAudio.play(); 
+            } catch(e) { 
+                console.log("드럼롤 오디오 재생 실패:", e); 
+            }
         }
 
         function prepareResults() {
@@ -521,16 +560,15 @@
                 let count = 5;
                 const numberEl = document.getElementById('countdown-number');
                 numberEl.innerText = count;
-                playBeep();
+                
+                playDrumRoll();
 
                 const cTimer = setInterval(() => {
                     count--;
                     if(count > 0) {
                         numberEl.innerText = count;
-                        playBeep();
                     } else {
                         clearInterval(cTimer);
-                        playBeep(true); 
                         closeModal('countdown-modal');
                         showFinalResults();
                     }
@@ -541,24 +579,33 @@
         }
 
         function showFinalResults() {
+            if (drumPlayer && typeof drumPlayer.pauseVideo === 'function') { drumPlayer.pauseVideo(); }
+            
             showScreen('result-screen');
             document.getElementById('result-title').innerText = voteState.title;
             document.getElementById('result-summary').innerText = `전체 인원: ${voteState.participants}명 / 총 투표수: ${voteState.totalVotesCast}표 / 기권: ${voteState.abstentions}표`;
 
             const detailContainer = document.getElementById('result-details');
             detailContainer.innerHTML = '';
-
+            
             const maxVotes = voteState.items.length > 0 ? Math.max(...voteState.items.map(i => i.votes)) : 0;
             const winners = voteState.items.filter(i => i.votes === maxVotes && maxVotes > 0);
 
             voteState.items.forEach(item => {
                 const isWinner = (item.votes === maxVotes && maxVotes > 0);
                 const highlightClass = isWinner ? 'winner-highlight' : '';
+
+                const percent = voteState.totalVotesCast === 0 ? 0 : Math.round((item.votes / voteState.totalVotesCast) * 100);
                 
                 detailContainer.insertAdjacentHTML('beforeend', `
-                    <div class="result-item ${highlightClass}">
-                        <strong>${item.id}. ${item.name}</strong>
-                        <span>${item.votes} 표</span>
+                    <div class="result-item ${highlightClass}" style="display: block;">
+                        <div class="result-item-info">
+                            <span>${item.id}. ${item.name}</span>
+                            <span>${item.votes}표 (${percent}%)</span>
+                        </div>
+                        <div class="result-bar-container">
+                            <div class="result-bar-fill" style="width: ${percent}%;"></div>
+                        </div>
                     </div>
                 `);
             });
@@ -571,6 +618,22 @@
                     document.getElementById('winner-announcement').innerText = `'${winnerNames}' 동점입니다! 😲`;
                 } else {
                     document.getElementById('winner-announcement').innerText = `🎉 '${winnerNames}' 당선(선정)을 축하합니다! 🎉`;
+                    
+                    confetti({
+                        particleCount: 150, 
+                        spread: 80,        
+                        origin: { x: 0, y: 0.6 }, 
+                        angle: 60,
+                        zIndex: 9999
+                    });
+
+                    confetti({
+                        particleCount: 150, 
+                        spread: 80,        
+                        origin: { x: 1, y: 0.6 }, 
+                        angle: 120,
+                        zIndex: 9999
+                    });
                 }
             }
 
