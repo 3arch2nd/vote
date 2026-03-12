@@ -128,7 +128,7 @@
 
         .vote-btn { background-color: transparent; color: var(--text-main); border: 3px solid var(--primary); margin-bottom: 15px; font-size: 28px; text-align: left; padding: 20px 30px; width: 100%; }
         .vote-btn:hover { background-color: rgba(124, 144, 63, 0.1); transform: translateY(-2px); transition: all 0.2s; }
-        .vote-btn-abstain { border-color: var(--warm-gray); color: var(--warm-gray-hover); margin-top: 30px; background-color: transparent; text-align: center; }
+        .vote-btn-abstain { border-color: var(--warm-gray); color: var(--warm-gray-hover); background-color: transparent; text-align: center; }
         .vote-btn-abstain:hover { background-color: rgba(154, 146, 134, 0.1); }
 
         #voting-buttons {
@@ -138,20 +138,31 @@
             width: 100%;
         }
 
-        #voting-buttons.grid-mode {
+        #voting-buttons.grid-mode-2 {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 12px;
+            gap: 15px;
         }
 
-        #voting-buttons.grid-mode .vote-btn-abstain {
-            margin-top: 0;
+        #voting-buttons.grid-mode-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        #voting-buttons.grid-mode-2 .vote-btn-abstain,
+        #voting-buttons.grid-mode-3 .vote-btn-abstain {
+            grid-column: 1 / -1;
+            margin-top: 5px;
         }
 
         #voting-screen {
-            overflow: hidden; 
+            overflow-y: auto; 
             max-height: 95vh;         
         }
+        #voting-screen::-webkit-scrollbar { width: 8px; }
+        #voting-screen::-webkit-scrollbar-thumb { background: var(--warm-gray); border-radius: 0; }
+        #voting-screen::-webkit-scrollbar-track { background: var(--warm-gray-light); }
 
         .countdown-text { font-size: 150px; font-weight: bold; color: white; }
 
@@ -194,6 +205,7 @@
         @media (max-width: 768px) {
             .result-grid { grid-template-columns: 1fr; }
             .result-screen { overflow-y: auto; max-height: none; }
+            #voting-buttons.grid-mode-3 { grid-template-columns: 1fr 1fr; }
         }
 
         .result-item.winner-highlight { 
@@ -246,7 +258,6 @@
         .result-item-info { display: flex; justify-content: space-between; font-weight: bold; width: 100%; }
 
         @keyframes pulse-blink { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
-
     </style>
 </head>
 <body>
@@ -322,6 +333,19 @@
             <div class="modal-actions">
                 <button class="btn btn-secondary" onclick="closeModal('confirm-modal')">수정하기</button>
                 <button class="btn" onclick="startVotingProcess()">이대로 시작!</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="alphabet-warn-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 450px; text-align: center;">
+            <h3 style="color: var(--primary); font-size: 26px;">🔤 영문키 사용 안내</h3>
+            <p style="font-size: 20px; margin: 20px 0; line-height: 1.6;">
+                10인 이상 후보 등록 시,<br><strong>영문키(A~Z)</strong>를 추가로 사용하게 됩니다.<br>계속할까요?
+            </p>
+            <div class="modal-actions" style="margin-top: 30px;">
+                <button class="btn btn-secondary" onclick="closeModal('alphabet-warn-modal')">취소</button>
+                <button class="btn" onclick="confirmAlphabetKey()">예, 계속합니다</button>
             </div>
         </div>
     </div>
@@ -433,6 +457,7 @@
         };
 
         let targetDeleteId = null; 
+        let alphabetWarnShown = false;
 
         let lastTouchTime = 0;
         document.addEventListener('touchstart', () => { lastTouchTime = Date.now(); }, {passive: true});
@@ -441,6 +466,11 @@
             initItemInputs();
             document.addEventListener('keydown', handleKeyPress);
         };
+
+        function getDisplayKey(index) {
+            if (index <= 9) return index.toString();
+            return String.fromCharCode(55 + index); 
+        }
 
         function toggleFullScreen() {
             if (!document.fullscreenElement) {
@@ -472,24 +502,38 @@
         function initItemInputs() {
             const list = document.getElementById('items-list');
             list.innerHTML = '';
+            alphabetWarnShown = false;
             for(let i=1; i<=3; i++) { appendItemRow(list, i); }
         }
 
         function addItemInput() {
             const list = document.getElementById('items-list');
-            if (list.children.length >= 9) {
-                return showToast("최대 9명까지만 등록 가능합니다(키보드 숫자 키 제한)");
+            const count = list.children.length;
+            
+            if (count >= 35) {
+                return showToast("최대 35명(1~9, A~Z)까지만 등록 가능합니다.");
             }
             
-            const count = list.children.length + 1;
-            appendItemRow(list, count);
+            if (count === 9 && !alphabetWarnShown) {
+                openModal('alphabet-warn-modal');
+                return;
+            }
+            
+            appendItemRow(list, count + 1);
+        }
+
+        function confirmAlphabetKey() {
+            alphabetWarnShown = true;
+            closeModal('alphabet-warn-modal');
+            const list = document.getElementById('items-list');
+            appendItemRow(list, list.children.length + 1);
         }
 
         function appendItemRow(container, index) {
             const div = document.createElement('div');
             div.className = 'item-input-box';
             div.innerHTML = `
-                <span class="item-number">${index}.</span>
+                <span class="item-number">${getDisplayKey(index)}.</span>
                 <input type="text" class="item-input" placeholder="항목 입력">
                 <button class="btn-remove" onclick="removeItemInput(this)" title="삭제">-</button>
             `;
@@ -508,7 +552,7 @@
 
         function updateItemNumbers() {
             const spans = document.querySelectorAll('#items-list .item-number');
-            spans.forEach((span, index) => { span.innerText = `${index + 1}.`; });
+            spans.forEach((span, index) => { span.innerText = `${getDisplayKey(index + 1)}.`; });
         }
 
         function checkSetup() {
@@ -519,7 +563,7 @@
             let count = 1;
             inputs.forEach(input => {
                 const val = input.value.trim();
-                if(val) { validItems.push({ id: count++, name: val, votes: 0 }); }
+                if(val) { validItems.push({ id: count, key: getDisplayKey(count), name: val, votes: 0 }); count++; }
             });
 
             const participants = parseInt(document.getElementById('voter-count').value);
@@ -536,7 +580,7 @@
                 currentPersonIndex: 1, currentPersonVotesCast: 0, abstentions: 0, totalVotesCast: 0
             };
 
-            const itemNames = validItems.map(item => `${item.id}. ${item.name}`).join(' / ');
+            const itemNames = validItems.map(item => `${item.key}. ${item.name}`).join(' / ');
 
             document.getElementById('confirm-text').innerHTML = `
                 <strong>제목:</strong> ${title}<br>
@@ -550,7 +594,7 @@
             openModal('confirm-modal');
         }
 
-function startVotingProcess() {
+        function startVotingProcess() {
             closeModal('confirm-modal');
             
             if (!document.fullscreenElement) {
@@ -560,15 +604,10 @@ function startVotingProcess() {
             showScreen('voting-screen');
             
             const guideText = document.getElementById('guide-text');
-            if (voteState.items.length <= 9) {
+            if (voteState.items.length <= 35) {
                 guideText.innerHTML = `
-                    👉 원하는 번호를 <strong style="text-decoration: underline 3px solid white; text-underline-offset: 4px;">자판(키보드) 숫자키</strong>나 <strong style="text-decoration: underline 3px solid white; text-underline-offset: 4px;">화면 터치</strong>로 선택해 주세요.<br>
-                    <span style="font-size:20px; color:rgba(255,255,255,0.7); display:inline-block; margin-top:15px;">(※ 클릭 방지를 위해 마우스는 사용할 수 없습니다)</span>
-                `;
-            } else {
-                guideText.innerHTML = `
-                    👉 원하는 항목을 <strong>마우스 클릭</strong>이나 <strong>터치</strong>로 선택해 주세요.<br>
-                    <span style="font-size:20px; color:rgba(255,255,255,0.7); display:inline-block; margin-top:15px;">(※ 1~9번까지는 키보드 숫자키도 지원합니다)</span>
+                    👉 원하는 항목의 <strong style="text-decoration: underline 3px solid white; text-underline-offset: 4px;">지정된 키(숫자 또는 영문)</strong>나 <strong style="text-decoration: underline 3px solid white; text-underline-offset: 4px;">화면 터치</strong>로 선택해 주세요.<br>
+                    <span style="font-size:20px; color:rgba(255,255,255,0.7); display:inline-block; margin-top:15px;">(※ 부정 클릭 방지를 위해 마우스는 사용할 수 없습니다)</span>
                 `;
             }
 
@@ -576,35 +615,33 @@ function startVotingProcess() {
             buildVotingScreen();
         }
 
-function buildVotingScreen() {
+        function buildVotingScreen() {
             document.getElementById('voting-title').innerText = voteState.title;
             const btnContainer = document.getElementById('voting-buttons');
+            
+            btnContainer.className = '';
             btnContainer.innerHTML = '';
 
-            const totalItems = voteState.items.length + 1; 
-            if (totalItems > 6) {
-                btnContainer.classList.add('grid-mode');
-            } else {
-                btnContainer.classList.remove('grid-mode');
-            }
-
+            const totalItems = voteState.items.length + 1;
+            
             let padding = "20px 30px";
             let fontSize = "28px";
-            let margin = "0 0 15px 0";
+            let margin = "0";
 
-            if (totalItems > 6) {
-                if (totalItems > 12) {
-                    padding = "10px 15px"; fontSize = "18px"; margin = "0";
-                } else {
-                    padding = "15px 20px"; fontSize = "22px"; margin = "0";
-                }
+            if (totalItems > 10) {
+                btnContainer.classList.add('grid-mode-3');
+                padding = "15px 20px";
+                fontSize = "24px";
+            } else if (totalItems > 6) {
+                btnContainer.classList.add('grid-mode-2');
+                padding = "18px 20px";
+                fontSize = "26px";
             } else {
+                margin = "0 0 15px 0";
                 if (totalItems === 6) {
-                    padding = "10px 30px"; margin = "0 0 8px 0"; 
+                    padding = "15px 30px"; margin = "0 0 10px 0"; 
                 } else if (totalItems === 5) {
-                    padding = "14px 30px"; margin = "0 0 10px 0";
-                } else {
-                    padding = "20px 30px"; margin = "0 0 15px 0"; 
+                    padding = "18px 30px"; margin = "0 0 12px 0";
                 }
             }
 
@@ -613,14 +650,14 @@ function buildVotingScreen() {
                     <button class="btn vote-btn" 
                             style="padding: ${padding}; font-size: ${fontSize}; margin: ${margin};" 
                             onclick="handleVoteClick(event, ${item.id})">
-                        <strong>${item.id}.</strong> ${item.name}
+                        <strong>${item.key}.</strong> ${item.name}
                     </button>
                 `);
             });
 
             btnContainer.insertAdjacentHTML('beforeend', `
                 <button class="btn vote-btn vote-btn-abstain" 
-                        style="padding: ${padding}; font-size: ${fontSize}; margin: ${margin};" 
+                        style="padding: ${padding}; font-size: ${fontSize}; margin: ${margin}; margin-top: 10px;" 
                         onclick="handleVoteClick(event, 0)">
                     0. 기권
                 </button>
@@ -635,24 +672,27 @@ function buildVotingScreen() {
 
         function handleKeyPress(e) {
             if(document.getElementById('voting-screen').classList.contains('active') && !isVotingLocked && document.getElementById('guide-modal').style.display !== 'flex') {
-                const key = e.key;
-                if(key >= '0' && key <= '9') {
-                    const id = parseInt(key);
-                    if(id === 0 || voteState.items.find(item => item.id === id)) {
-                        castVote(id);
+                const keyUpper = e.key.toUpperCase();
+                
+                if (keyUpper === '0') {
+                    castVote(0);
+                } else {
+                    const target = voteState.items.find(item => item.key === keyUpper);
+                    if(target) {
+                        castVote(target.id);
                     }
                 }
             }
         }
 
         function handleVoteClick(e, itemId) {
-            if (voteState.items.length <= 9) {
+            if (voteState.items.length <= 35) {
                 const isTouch = (Date.now() - lastTouchTime < 500) || e.pointerType === 'touch';
                 const isKeyboard = e.detail === 0 && !e.pointerType;
                 
                 if (!isTouch && !isKeyboard) {
                     e.preventDefault();
-                    showToast(" 🚫 마우스 클릭 제한 중입니다. 키보드 숫자키나 화면 터치를 이용해 주세요!");
+                    showToast(" 🚫 마우스 클릭 제한 중입니다. 키보드(숫자/영문)나 화면 터치를 이용해 주세요!");
                     return;
                 }
             }
@@ -810,7 +850,7 @@ function buildVotingScreen() {
                 detailContainer.insertAdjacentHTML('beforeend', `
                     <div class="result-item" id="result-item-${item.id}" style="padding: ${itemPadding};">
                         <div class="result-item-info" style="font-size: ${fontSize};">
-                            <span>${item.id}. ${item.name}</span>
+                            <span>${item.key}. ${item.name}</span>
                             <span id="result-text-${item.id}">0표 (0%)</span>
                         </div>
                         <div class="result-bar-container" style="height: ${barHeight}; margin-top: 5px;">
@@ -960,12 +1000,12 @@ function buildVotingScreen() {
             record.items.forEach(item => {
                 const percent = validVotesHistory === 0 ? 0 : Math.round((item.votes / validVotesHistory) * 100);
                 const isWinner = (item.votes === maxVotes && maxVotes > 0);
-                const highlightClass = isWinner ? 'winner-highlight' : '';
+                const highlightClass = isWinner ? 'winner-highlight' : ''; 
 
                 detailContainer.insertAdjacentHTML('beforeend', `
                     <div class="result-item ${highlightClass}" style="padding: 8px 12px; margin-bottom: 6px;">
                         <div class="result-item-info" style="font-size: 18px;">
-                            <span>${item.id}. ${item.name}</span>
+                            <span>${item.key || item.id}. ${item.name}</span>
                             <span>${item.votes}표 (${percent}%)</span>
                         </div>
                         <div class="result-bar-container" style="height: 12px; margin-top: 5px; background-color: var(--warm-gray-light);">
